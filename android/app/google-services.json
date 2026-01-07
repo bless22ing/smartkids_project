@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "84861660444",
+    "project_id": "smartkids-edu-platform",
+    "storage_bucket": "smartkids-edu-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84861660444:android:3c3bf314444af1b7275ed9",
+        "android_client_info": {
+          "package_name": "com.smartkids.smartkids_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCS5ssnWW5yloV5wQat_Qz3YksS8u4evyo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
