@@ -1,13 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'add_intervention_record_screen.dart';
-
-enum InterventionType { remedial, extension }
 
 class InterventionRecordScreen extends StatelessWidget {
-  final InterventionType type;
+  final String studentId;
+  final String type; // remedial | extension
 
   const InterventionRecordScreen({
     super.key,
+    required this.studentId,
     required this.type,
   });
 
@@ -15,106 +15,211 @@ class InterventionRecordScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final title =
-    type == InterventionType.remedial ? "Remedial Records" : "Extension Records";
+    final interventionsRef = FirebaseFirestore.instance
+        .collection('students')
+        .doc(studentId)
+        .collection('interventions')
+        .where('type', isEqualTo: type)
+        .orderBy('date', descending: true);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(
+          type == 'remedial'
+              ? "Remedial Records"
+              : "Extension Records",
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddInterventionRecordScreen(type: type),
-            ),
-          );
+          _showAddInterventionDialog(context, studentId, type);
         },
         child: const Icon(Icons.add),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5, // dummy
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return _InterventionCard(
-            title: type == InterventionType.remedial
-                ? "Difficulty with fractions"
-                : "Advanced problem-solving task",
-            strategy: type == InterventionType.remedial
-                ? "Used visual aids and one-on-one support"
-                : "Introduced Olympiad-style questions",
-            outcome: "Student showed improvement",
-            date: "22 Mar 2026",
+      body: StreamBuilder<QuerySnapshot>(
+        stream: interventionsRef.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text("No records yet"),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+
+              return _InterventionTile(
+                date: data['date'] ?? '',
+                subject: data['subject'] ?? '',
+                focus: data['focus'] ?? '',
+                outcome: data['outcome'] ?? '',
+                type: type,
+              );
+            },
           );
         },
       ),
     );
   }
+
+  // ================= ADD DIALOG =================
+
+  void _showAddInterventionDialog(
+      BuildContext context,
+      String studentId,
+      String type,
+      ) {
+    final dateCtrl = TextEditingController();
+    final subjectCtrl = TextEditingController();
+    final focusCtrl = TextEditingController();
+    final strategyCtrl = TextEditingController();
+    final outcomeCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            type == 'remedial'
+                ? "Add Remedial Record"
+                : "Add Extension Record",
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: dateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Date (YYYY-MM-DD)",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: subjectCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Subject",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: focusCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Focus Area",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: strategyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Strategy Used",
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: outcomeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Outcome",
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (dateCtrl.text.isEmpty ||
+                    subjectCtrl.text.isEmpty ||
+                    focusCtrl.text.isEmpty) return;
+
+                await FirebaseFirestore.instance
+                    .collection('students')
+                    .doc(studentId)
+                    .collection('interventions')
+                    .add({
+                  'type': type,
+                  'date': dateCtrl.text.trim(),
+                  'subject': subjectCtrl.text.trim(),
+                  'focus': focusCtrl.text.trim(),
+                  'strategy': strategyCtrl.text.trim(),
+                  'outcome': outcomeCtrl.text.trim(),
+                  'createdAt': Timestamp.now(),
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class _InterventionCard extends StatelessWidget {
-  final String title;
-  final String strategy;
-  final String outcome;
-  final String date;
+// ================= TILE =================
 
-  const _InterventionCard({
-    required this.title,
-    required this.strategy,
-    required this.outcome,
+class _InterventionTile extends StatelessWidget {
+  final String date;
+  final String subject;
+  final String focus;
+  final String outcome;
+  final String type;
+
+  const _InterventionTile({
     required this.date,
+    required this.subject,
+    required this.focus,
+    required this.outcome,
+    required this.type,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final color =
+    type == 'remedial' ? Colors.red : Colors.green;
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Date
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(date),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Title
-            Text(
-              title,
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-
-            // Strategy
-            Text(
-              "Strategy:",
-              style: theme.textTheme.labelMedium,
-            ),
-            Text(strategy),
-
-            const SizedBox(height: 8),
-
-            // Outcome
-            Text(
-              "Outcome:",
-              style: theme.textTheme.labelMedium,
-            ),
-            Text(outcome),
-          ],
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.15),
+          child: Icon(
+            type == 'remedial'
+                ? Icons.build_outlined
+                : Icons.star_outline,
+            color: color,
+          ),
         ),
+        title: Text("$subject • $date"),
+        subtitle: Text(focus),
+        trailing: outcome.isNotEmpty
+            ? Text(
+          outcome,
+          style: theme.textTheme.labelSmall,
+        )
+            : null,
       ),
     );
   }

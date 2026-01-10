@@ -1,12 +1,23 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'add_reading_record_screen.dart';
 
 class ReadingRecordScreen extends StatelessWidget {
-  const ReadingRecordScreen({super.key});
+  final String studentId;
+
+  const ReadingRecordScreen({
+    super.key,
+    required this.studentId,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final readingRef = FirebaseFirestore.instance
+        .collection('students')
+        .doc(studentId)
+        .collection('reading')
+        .orderBy('date', descending: true);
 
     return Scaffold(
       appBar: AppBar(
@@ -14,43 +25,149 @@ class ReadingRecordScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AddReadingRecordScreen(),
-            ),
-          );
+          _showAddReadingDialog(context, studentId);
         },
         child: const Icon(Icons.add),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 6, // dummy data
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return _ReadingRecordCard(
-            date: "18 Mar 2026",
-            book: "Oxford Reading Tree – Level 4",
-            skill: "Fluency & comprehension",
-            comment:
-            "Reads confidently but struggles with inference questions.",
+      body: StreamBuilder<QuerySnapshot>(
+        stream: readingRef.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text("No reading records yet"),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+
+              return _ReadingTile(
+                date: data['date'] ?? '',
+                bookTitle: data['bookTitle'] ?? '',
+                level: data['level'] ?? '',
+                comment: data['comment'] ?? '',
+              );
+            },
           );
         },
       ),
     );
   }
+
+  // ================= ADD READING DIALOG =================
+
+  void _showAddReadingDialog(BuildContext context, String studentId) {
+    final dateCtrl = TextEditingController();
+    final bookCtrl = TextEditingController();
+    final commentCtrl = TextEditingController();
+    String level = 'Good';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Reading Record"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: dateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Date (YYYY-MM-DD)",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bookCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Book Title",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: level,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Excellent', child: Text('Excellent')),
+                    DropdownMenuItem(value: 'Good', child: Text('Good')),
+                    DropdownMenuItem(value: 'Fair', child: Text('Fair')),
+                    DropdownMenuItem(
+                        value: 'Needs Support',
+                        child: Text('Needs Support')),
+                  ],
+                  onChanged: (value) {
+                    level = value!;
+                  },
+                  decoration: const InputDecoration(
+                    labelText: "Reading Level",
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: commentCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Comment",
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (dateCtrl.text.isEmpty || bookCtrl.text.isEmpty) return;
+
+                await FirebaseFirestore.instance
+                    .collection('students')
+                    .doc(studentId)
+                    .collection('reading')
+                    .add({
+                  'date': dateCtrl.text.trim(),
+                  'bookTitle': bookCtrl.text.trim(),
+                  'level': level,
+                  'comment': commentCtrl.text.trim(),
+                  'createdAt': Timestamp.now(),
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class _ReadingRecordCard extends StatelessWidget {
+// ================= READING TILE =================
+
+class _ReadingTile extends StatelessWidget {
   final String date;
-  final String book;
-  final String skill;
+  final String bookTitle;
+  final String level;
   final String comment;
 
-  const _ReadingRecordCard({
+  const _ReadingTile({
     required this.date,
-    required this.book,
-    required this.skill,
+    required this.bookTitle,
+    required this.level,
     required this.comment,
   });
 
@@ -58,57 +175,44 @@ class _ReadingRecordCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    Color levelColor() {
+      switch (level) {
+        case 'Excellent':
+          return Colors.green;
+        case 'Good':
+          return Colors.blue;
+        case 'Fair':
+          return Colors.orange;
+        case 'Needs Support':
+          return Colors.red;
+        default:
+          return theme.disabledColor;
+      }
+    }
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Date
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(date),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Book
-            Text(
-              book,
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              skill,
-              style: theme.textTheme.bodyMedium,
-            ),
-
-            const SizedBox(height: 12),
-
-            // Comment
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant
-                    .withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                comment,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-          ],
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: levelColor().withValues(alpha: 0.15),
+          child: Icon(
+            Icons.menu_book_outlined,
+            color: levelColor(),
+          ),
+        ),
+        title: Text("$bookTitle • $date"),
+        subtitle: comment.isNotEmpty ? Text(comment) : null,
+        trailing: Text(
+          level,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: levelColor(),
+          ),
         ),
       ),
     );
   }
 }
-
