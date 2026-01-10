@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../features/classes_screen.dart';
 import '../../features/students/records/attendance/attendance_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
+import '../staff/staff_screen.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -17,23 +19,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<DashboardItem> items = const [
     DashboardItem(Icons.dashboard_outlined, "Dashboard"),
     DashboardItem(Icons.school_outlined, "Students"),
-    DashboardItem(Icons.person_outline, "Teachers"),
+    DashboardItem(Icons.person_outline, "Staff"),
     DashboardItem(Icons.check_circle_outline, "Attendance"),
-    DashboardItem(Icons.assignment_outlined, "Exams"),
+    DashboardItem(Icons.assignment_outlined, "Assessment"),
     DashboardItem(Icons.bar_chart_outlined, "Results"),
     DashboardItem(Icons.payments_outlined, "Fees"),
     DashboardItem(Icons.event_outlined, "Events"),
+    DashboardItem(Icons.class_outlined, "Classes")
   ];
 
   late final List<Widget> pages = [
     const _DashboardHome(),
     const StudentsListScreen(),
-    //const TeachersScreen(),
+    const StaffScreen(),
     const AttendanceScreen(),
     //const Placeholder(), // Exams
     //const Placeholder(), // Results
     //const FeesScreen(),
     //const Placeholder(), // Events
+    const ClassesScreen(),
   ];
 
   @override
