@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../features/classes_screen.dart';
-import '../../features/students/records/attendance/attendance_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/classes/screens/classes_screen.dart';
+import '../../features/attendance/screens/attendance_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
-import '../staff/staff_screen.dart';
+import '../../features/staff/screens/staff_screen.dart';
+import '../../features/assessments/screens/assessment_screen.dart';
+import '../../features/fees/screens/fees_screen.dart';
+import '../../../features/auth/services/auth_service.dart';
 
-
-class DashboardScreen extends StatefulWidget {
+// Changed to ConsumerStatefulWidget because we need BOTH:
+// - local state (selectedIndex) → StatefulWidget
+// - Riverpod access (ref for logout) → ConsumerWidget
+// ConsumerStatefulWidget gives us both
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+// ConsumerState instead of State — gives us ref inside the state class
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int selectedIndex = 0;
 
   final List<DashboardItem> items = const [
@@ -22,23 +29,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     DashboardItem(Icons.person_outline, "Staff"),
     DashboardItem(Icons.check_circle_outline, "Attendance"),
     DashboardItem(Icons.assignment_outlined, "Assessment"),
-    DashboardItem(Icons.bar_chart_outlined, "Results"),
     DashboardItem(Icons.payments_outlined, "Fees"),
-    DashboardItem(Icons.event_outlined, "Events"),
-    DashboardItem(Icons.class_outlined, "Classes")
+    DashboardItem(Icons.class_outlined, "Classes"),
   ];
 
+  // Pages list matches items list exactly — same order, same count
+  // Placeholder is temporary for screens not built yet
   late final List<Widget> pages = [
     const _DashboardHome(),
     const StudentsListScreen(),
     const StaffScreen(),
     const AttendanceScreen(),
-    //const Placeholder(), // Exams
-    //const Placeholder(), // Results
-    //const FeesScreen(),
-    //const Placeholder(), // Events
+    const AssessmentScreen(),
+    const FeesScreen(),
     const ClassesScreen(),
   ];
+
+  // Logout through AuthService — proper way with Riverpod
+  Future<void> _handleLogout() async {
+    // ref.read() for one-time actions — not ref.watch()
+    // We use read here because we don't want to rebuild on logout
+    await ref.read(authServiceProvider).signOut();
+    // No need to navigate — authStateProvider will update automatically
+    // and the router's redirect will send user to /login on its own
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,62 +71,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ---------------- SIDEBAR (TABLET) ----------------
   Widget _buildSideBar(BuildContext context) {
     final theme = Theme.of(context);
 
-    return NavigationRail(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (index) {
-        setState(() => selectedIndex = index);
-      },
-      backgroundColor: theme.cardColor,
-      indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-      selectedIconTheme:
-      IconThemeData(color: theme.colorScheme.primary),
-      selectedLabelTextStyle: TextStyle(
-        color: theme.colorScheme.primary,
-        fontWeight: FontWeight.w600,
-      ),
-      unselectedIconTheme:
-      IconThemeData(color: theme.disabledColor),
-      labelType: NavigationRailLabelType.all,
-      leading: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.school,
-              size: 36,
+    return SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height,
+        ),
+        child: IntrinsicHeight(
+          child: NavigationRail(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() => selectedIndex = index);
+            },
+            backgroundColor: theme.cardColor,
+            labelType: NavigationRailLabelType.selected,
+            indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+            selectedIconTheme: IconThemeData(color: theme.colorScheme.primary),
+            selectedLabelTextStyle: TextStyle(
               color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 8),
-            Text(
-              "SmartKids",
-              style: theme.textTheme.titleMedium,
+            unselectedIconTheme: IconThemeData(color: theme.disabledColor),
+
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  Icon(Icons.school, size: 36, color: theme.colorScheme.primary),
+                  const SizedBox(height: 8),
+                  Text("SmartKids", style: theme.textTheme.titleMedium),
+                ],
+              ),
             ),
-          ],
+
+            trailing: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: IconButton(
+                icon: Icon(Icons.logout, color: theme.disabledColor),
+                // Now uses our proper logout method
+                onPressed: _handleLogout,
+                tooltip: 'Logout',
+              ),
+            ),
+
+            destinations: items.map((e) {
+              return NavigationRailDestination(
+                icon: Icon(e.icon),
+                label: Text(e.label),
+              );
+            }).toList(),
+          ),
         ),
       ),
-      trailing: Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: IconButton(
-          icon: Icon(Icons.logout, color: theme.disabledColor),
-          onPressed: () => FirebaseAuth.instance.signOut(),
-        ),
-      ),
-      destinations: items
-          .map(
-            (e) => NavigationRailDestination(
-          icon: Icon(e.icon),
-          label: Text(e.label),
-        ),
-      )
-          .toList(),
     );
   }
 
-  // ---------------- BOTTOM NAV (PHONE) ----------------
   Widget _buildBottomNav(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -123,14 +138,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       unselectedItemColor: theme.disabledColor,
       backgroundColor: theme.cardColor,
       type: BottomNavigationBarType.fixed,
-      items: items
-          .map(
-            (e) => BottomNavigationBarItem(
+      items: items.map((e) {
+        return BottomNavigationBarItem(
           icon: Icon(e.icon),
           label: e.label,
-        ),
-      )
-          .toList(),
+        );
+      }).toList(),
     );
   }
 }
@@ -175,15 +188,15 @@ class _DashboardHeader extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               "School Management Overview",
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.disabledColor),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.disabledColor,
+              ),
             ),
           ],
         ),
         CircleAvatar(
           radius: 22,
-          backgroundColor:
-          theme.colorScheme.primary.withValues(alpha: 0.1),
+          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
           child: Icon(Icons.person, color: theme.colorScheme.primary),
         ),
       ],
@@ -198,8 +211,7 @@ class _DashboardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dashboard =
-    context.findAncestorStateOfType<_DashboardScreenState>()!;
+    final dashboard = context.findAncestorStateOfType<_DashboardScreenState>()!;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -215,7 +227,6 @@ class _DashboardGrid extends StatelessWidget {
           mainAxisSpacing: 16,
           children: List.generate(dashboard.items.length, (index) {
             final item = dashboard.items[index];
-
             return _DashboardCard(
               icon: item.icon,
               label: item.label,
@@ -269,13 +280,8 @@ class _DashboardCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor:
-              theme.colorScheme.primary.withValues(alpha: 0.1),
-              child: Icon(
-                icon,
-                color: theme.colorScheme.primary,
-                size: 28,
-              ),
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+              child: Icon(icon, color: theme.colorScheme.primary, size: 28),
             ),
             const SizedBox(height: 12),
             Text(label, style: theme.textTheme.titleMedium),
