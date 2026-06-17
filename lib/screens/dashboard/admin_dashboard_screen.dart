@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/classes/screens/classes_screen.dart';
-import '../../features/attendance/screens/attendance_screen.dart';
+//import '../../features/classes/screens/classes_screen.dart';
+//import '../../features/attendance/screens/attendance_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
-import '../../features/staff/screens/staff_screen.dart';
+//import '../../features/staff/screens/staff_screen.dart';
 import '../../features/assessments/screens/assessment_screen.dart';
-import '../../features/fees/screens/fees_screen.dart';
+//import '../../features/fees/screens/fees_screen.dart';
 import '../../../features/auth/services/auth_service.dart';
 
 // Changed to ConsumerStatefulWidget because we need BOTH:
 // - local state (selectedIndex) → StatefulWidget
 // - Riverpod access (ref for logout) → ConsumerWidget
 // ConsumerStatefulWidget gives us both
-class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+class AdminDashboardScreen extends ConsumerStatefulWidget {
+  const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
 // ConsumerState instead of State — gives us ref inside the state class
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int selectedIndex = 0;
 
   final List<DashboardItem> items = const [
@@ -38,11 +38,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late final List<Widget> pages = [
     const _DashboardHome(),
     const StudentsListScreen(),
-    const StaffScreen(),
-    const AttendanceScreen(),
-    const AssessmentScreen(),
-    const FeesScreen(),
-    const ClassesScreen(),
+    //const StaffScreen(),
+    //const AttendanceScreen(),
+    //const AssessmentScreen(),
+    //const FeesScreen(),
+    //const ClassesScreen(),
   ];
 
   // Logout through AuthService — proper way with Riverpod
@@ -211,7 +211,7 @@ class _DashboardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dashboard = context.findAncestorStateOfType<_DashboardScreenState>()!;
+    final dashboard = context.findAncestorStateOfType<_AdminDashboardScreenState>()!;
 
     return LayoutBuilder(
       builder: (context, constraints) {

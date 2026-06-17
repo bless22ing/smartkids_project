@@ -7,7 +7,11 @@ import 'record_assessment_screen.dart';
 class AssessmentScreen extends StatefulWidget {
   final AssessmentService service;
 
-  const AssessmentScreen({super.key, required this.service});
+  // Remove 'const' here
+  AssessmentScreen({
+    super.key,
+    AssessmentService? service,
+  }) : service = service ?? AssessmentService();
 
   @override
   State<AssessmentScreen> createState() => _AssessmentScreenState();
@@ -28,7 +32,6 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
         itemCount: assessments.length,
         itemBuilder: (context, index) {
           final a = assessments[index];
-
           return Card(
             margin: const EdgeInsets.all(10),
             child: ListTile(
@@ -50,18 +53,17 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
           );
         },
       ),
-
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  CreateAssessmentScreen(service: widget.service),
+              builder: (_) => CreateAssessmentScreen(
+                service: widget.service,
+              ),
             ),
           );
-
           setState(() {});
         },
       ),

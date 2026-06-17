@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smartkids_project/features/students/records/progress/progress_record_screen.dart';
 import 'package:smartkids_project/features/students/records/reading/reading_record_screen.dart';
+import '../../attendance/screens/attendance_record_screen.dart';
 import 'anecdotal/anecdotal_record_screen.dart';
-import 'attendance/attendance_record_screen.dart';
 import 'development/development_checklist_screen.dart';
 import 'intervention/intervention_record_screen.dart';
 
