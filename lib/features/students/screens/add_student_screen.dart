@@ -648,26 +648,26 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
             const SizedBox(height: 16),
 
+            // Allergies field
             TextFormField(
               controller: _allergiesCtrl,
               decoration: _inputDecoration(
                 label: 'Allergies',
                 icon: Icons.warning_amber_outlined,
+                helperHint: 'e.g. Peanuts, dairy, bee stings...', // renamed
               ),
               maxLines: 3,
-              hint: 'e.g. Peanuts, dairy, bee stings...',
             ),
 
-            const SizedBox(height: 16),
-
+// Medical notes field
             TextFormField(
               controller: _medicalNotesCtrl,
               decoration: _inputDecoration(
                 label: 'Medical Notes',
                 icon: Icons.notes_outlined,
+                helperHint: 'Any conditions, medications, or special needs...', // renamed
               ),
               maxLines: 4,
-              hint: 'Any conditions, medications, or special needs...',
             ),
           ],
         ),
@@ -676,16 +676,17 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   }
 
   // Shared input decoration — consistent styling across all steps
+
   InputDecoration _inputDecoration({
     required String label,
     required IconData icon,
-    String? hint,
+    String? helperHint, // renamed to avoid confusion
   }) {
     final theme = Theme.of(context);
 
     return InputDecoration(
       labelText: label,
-      hintText: hint,
+      hintText: helperHint, // use renamed parameter here
       prefixIcon: Icon(icon, color: theme.colorScheme.primary),
       filled: true,
       fillColor: theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),

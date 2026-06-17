@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'student_profile_screen.dart';
 import '../services/student_service.dart';
 import '../models/student_model.dart';
 import 'add_student_screen.dart';
 
-// Changed to ConsumerWidget — needs ref to watch studentsStreamProvider
 class StudentsListScreen extends ConsumerWidget {
   const StudentsListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    // Watch the stream provider — rebuilds automatically when data changes
-    // This replaces the old StreamBuilder + StudentService() pattern
     final studentsAsync = ref.watch(studentsStreamProvider);
 
     return Scaffold(
@@ -22,7 +19,12 @@ class StudentsListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Navigate to AddStudentScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddStudentScreen(),
+            ),
+          );
         },
         child: const Icon(Icons.add),
       ),
@@ -30,7 +32,6 @@ class StudentsListScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search bar — UI only for now
             TextField(
               decoration: InputDecoration(
                 hintText: "Search students...",
@@ -47,15 +48,12 @@ class StudentsListScreen extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Student list — uses Riverpod AsyncValue instead of StreamBuilder
             Expanded(
               child: studentsAsync.when(
-                // Loading state
                 loading: () => const Center(
                   child: CircularProgressIndicator(),
                 ),
 
-                // Error state
                 error: (error, stack) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +77,6 @@ class StudentsListScreen extends ConsumerWidget {
                   ),
                 ),
 
-                // Data state
                 data: (students) {
                   if (students.isEmpty) {
                     return Center(
@@ -110,14 +107,19 @@ class StudentsListScreen extends ConsumerWidget {
 
                   return ListView.separated(
                     itemCount: students.length,
-                    separatorBuilder: (_, __) =>
-                    const SizedBox(height: 8),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final student = students[index];
                       return _StudentTile(
                         student: student,
                         onTap: () {
                           // TODO: Navigate to StudentProfileScreen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentProfileScreen(student: student),
+                            ),
+                          );
                         },
                       );
                     },
@@ -155,14 +157,12 @@ class _StudentTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: CircleAvatar(
-          // Show photo if available, otherwise show initials
           backgroundImage: student.photoUrl != null
               ? NetworkImage(student.photoUrl!)
               : null,
           backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
           child: student.photoUrl == null
               ? Text(
-            // First letter of name as avatar
             student.name.isNotEmpty
                 ? student.name[0].toUpperCase()
                 : '?',
@@ -183,7 +183,6 @@ class _StudentTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Active/inactive badge
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 8,

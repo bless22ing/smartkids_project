@@ -1,96 +1,182 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/student_model.dart';
-import '../records/records_hub_screen.dart';
+import '../services/student_service.dart';
+import '../../../shared/models/app_user.dart';
+import '../../auth/services/auth_service.dart';
 
-class StudentProfileScreen extends StatelessWidget {
+class StudentProfileScreen extends ConsumerStatefulWidget {
   final StudentModel student;
 
-  const StudentProfileScreen({
-    super.key,
-    required this.student,
-  });
+  const StudentProfileScreen({super.key, required this.student});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(student.name),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ProfileHeader(student: student),
-            const SizedBox(height: 24),
-            _InfoSection(student: student),
-            const SizedBox(height: 32),
-            _RecordsSection(studentId: student.id),
-          ],
-        ),
-      ),
-    );
-  }
+  ConsumerState<StudentProfileScreen> createState() =>
+      _StudentProfileScreenState();
 }
 
-// ================= PROFILE HEADER =================
+class _StudentProfileScreenState
+    extends ConsumerState<StudentProfileScreen>
+    with SingleTickerProviderStateMixin {
+  // TabController controls which tab is active
+  // SingleTickerProviderStateMixin is required by TabController
+  late final TabController _tabController;
 
-class _ProfileHeader extends StatelessWidget {
-  final StudentModel student;
-
-  const _ProfileHeader({required this.student});
+  // We keep a local copy of the student so we can update it
+  // after edits without waiting for Firestore to refresh
+  late StudentModel _student;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  void initState() {
+    super.initState();
+    _student = widget.student;
+    // 5 tabs — Personal, Medical, Attendance, Assessments, Social
+    _tabController = TabController(length: 5, vsync: this);
+  }
 
-    return Center(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor:
-            theme.colorScheme.primary.withValues(alpha: 0.12),
-            child: Text(
-              student.name.isNotEmpty ? student.name[0] : "?",
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(color: theme.colorScheme.primary),
-            ),
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // Deactivate student — shows confirmation dialog first
+  Future<void> _deactivateStudent() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deactivate Student'),
+        content: Text(
+          'Are you sure you want to deactivate ${_student.name}? '
+              'Their records will be kept but they will be marked as inactive.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-          const SizedBox(height: 12),
-          Text(
-            student.name,
-            style: theme.textTheme.titleLarge,
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Deactivate'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(studentServiceProvider)
+          .deactivateStudent(_student.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student deactivated successfully'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to deactivate: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
-}
-
-// ================= INFO SECTION =================
-
-class _InfoSection extends StatelessWidget {
-  final StudentModel student;
-
-  const _InfoSection({required this.student});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    final theme = Theme.of(context);
+    // Watch current user to check permissions
+    final userAsync = ref.watch(currentUserProvider);
+
+    return Scaffold(
+      body: NestedScrollView(
+        // NestedScrollView lets the header scroll away
+        // while the tab content stays and scrolls independently
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true, // keeps app bar visible when scrolled
+              actions: [
+                // Only show edit/deactivate to admins
+                userAsync.when(
+                  data: (user) {
+                    if (user == null || !user.role.isAdmin) {
+                      return const SizedBox.shrink();
+                    }
+                    return Row(
+                      children: [
+                        // Edit button
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Edit Student',
+                          onPressed: () {
+                            // TODO: Navigate to EditStudentScreen
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Edit coming soon'),
+                              ),
+                            );
+                          },
+                        ),
+                        // Deactivate button — only if student is active
+                        if (_student.active)
+                          IconButton(
+                            icon: const Icon(Icons.person_off_outlined),
+                            tooltip: 'Deactivate Student',
+                            onPressed: _deactivateStudent,
+                          ),
+                      ],
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ],
+
+              // Flexible space shows the student header
+              flexibleSpace: FlexibleSpaceBar(
+                background: _StudentHeader(student: _student),
+              ),
+
+              // Tab bar stays pinned at the bottom of the app bar
+              bottom: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabs: const [
+                  Tab(text: 'Personal'),
+                  Tab(text: 'Medical'),
+                  Tab(text: 'Attendance'),
+                  Tab(text: 'Assessments'),
+                  Tab(text: 'Social'),
+                ],
+              ),
+            ),
+          ];
+        },
+
+        // Tab content
+        body: TabBarView(
+          controller: _tabController,
           children: [
-            _InfoTile(label: "Grade", value: student.classId),
-            const SizedBox(height: 12),
-            _InfoTile(label: "Gender", value: student.gender),
+            _PersonalTab(student: _student),
+            _MedicalTab(student: _student),
+            _AttendanceTab(student: _student),
+            _AssessmentsTab(student: _student),
+            _SocialTab(student: _student),
           ],
         ),
       ),
@@ -98,98 +184,384 @@ class _InfoSection extends StatelessWidget {
   }
 }
 
-// ================= RECORDS HUB =================
+// ================= STUDENT HEADER =================
 
-class _RecordsSection extends StatelessWidget {
-  final String studentId;
-
-  const _RecordsSection({required this.studentId});
+class _StudentHeader extends StatelessWidget {
+  final StudentModel student;
+  const _StudentHeader({required this.student});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final records = [
-      _RecordItem("Anecdotal Records", Icons.note_alt_outlined),
-      _RecordItem("Attendance", Icons.check_circle_outline),
-      _RecordItem("Progress Record", Icons.trending_up),
-      _RecordItem("Reading Record", Icons.menu_book_outlined),
-      _RecordItem("Developmental Checklist", Icons.fact_check_outlined),
-      _RecordItem("Remedial Work", Icons.build_outlined),
-      _RecordItem("Extension Work", Icons.star_outline),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Student Records",
-          style: theme.textTheme.titleLarge,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withValues(alpha: 0.7),
+          ],
         ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: records.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
-          ),
-          itemBuilder: (context, index) {
-            final item = records[index];
-
-            return InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RecordsHubScreen(
-                      title: item.title,
-                      studentId: studentId,
-                    ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+          child: Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 40,
+                backgroundImage: student.photoUrl != null
+                    ? NetworkImage(student.photoUrl!)
+                    : null,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: student.photoUrl == null
+                    ? Text(
+                  student.name.isNotEmpty
+                      ? student.name[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
-                );
-              },
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                )
+                    : null,
+              ),
+
+              const SizedBox(width: 16),
+
+              // Name and details
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      item.icon,
-                      size: 32,
-                      color: theme.colorScheme.primary,
+                    Text(
+                      student.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${student.className} • Age ${student.age} • ${student.gender}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      item.title,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleSmall,
+                    // Active/inactive badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: student.active
+                            ? Colors.green
+                            : Colors.grey,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        student.active ? 'Enrolled' : 'Inactive',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            );
-          },
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= PERSONAL TAB =================
+
+class _PersonalTab extends StatelessWidget {
+  final StudentModel student;
+  const _PersonalTab({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _SectionCard(
+          title: 'Personal Information',
+          children: [
+            _InfoRow(
+              icon: Icons.cake_outlined,
+              label: 'Date of Birth',
+              value:
+              '${student.dateOfBirth.day}/${student.dateOfBirth.month}/${student.dateOfBirth.year}',
+            ),
+            _InfoRow(
+              icon: Icons.people_outline,
+              label: 'Gender',
+              value: student.gender,
+            ),
+            _InfoRow(
+              icon: Icons.class_outlined,
+              label: 'Class',
+              value: student.className,
+            ),
+            _InfoRow(
+              icon: Icons.event_outlined,
+              label: 'Enrolled',
+              value:
+              '${student.enrollmentDate.day}/${student.enrollmentDate.month}/${student.enrollmentDate.year}',
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        _SectionCard(
+          title: 'Guardian 1 — ${student.guardian1.relationship}',
+          children: [
+            _InfoRow(
+              icon: Icons.person_outline,
+              label: 'Name',
+              value: student.guardian1.name,
+            ),
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Contact',
+              value: student.guardian1.contact,
+            ),
+            _InfoRow(
+              icon: Icons.email_outlined,
+              label: 'Email',
+              value: student.guardian1.email,
+            ),
+          ],
+        ),
+
+        // Only show guardian 2 if they have a name
+        if (student.guardian2.name.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Guardian 2 — ${student.guardian2.relationship}',
+            children: [
+              _InfoRow(
+                icon: Icons.person_outline,
+                label: 'Name',
+                value: student.guardian2.name,
+              ),
+              _InfoRow(
+                icon: Icons.phone_outlined,
+                label: 'Contact',
+                value: student.guardian2.contact,
+              ),
+              _InfoRow(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: student.guardian2.email,
+              ),
+            ],
+          ),
+        ],
+
+        const SizedBox(height: 16),
+
+        _SectionCard(
+          title: 'Next of Kin — ${student.nextOfKin.relationship}',
+          children: [
+            _InfoRow(
+              icon: Icons.person_outline,
+              label: 'Name',
+              value: student.nextOfKin.name,
+            ),
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Contact',
+              value: student.nextOfKin.contact,
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-// ================= INFO TILE =================
+// ================= MEDICAL TAB =================
 
-class _InfoTile extends StatelessWidget {
+class _MedicalTab extends StatelessWidget {
+  final StudentModel student;
+  const _MedicalTab({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Allergies warning card — highlighted in orange if has allergies
+        if (student.allergies.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.orange.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.warning_amber, color: Colors.orange),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Allergies',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(student.allergies),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        if (student.allergies.isNotEmpty) const SizedBox(height: 16),
+
+        _SectionCard(
+          title: 'Medical Notes',
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                student.medicalNotes.isNotEmpty
+                    ? student.medicalNotes
+                    : 'No medical notes recorded.',
+                style: TextStyle(
+                  color: student.medicalNotes.isNotEmpty
+                      ? null
+                      : Colors.grey,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ================= ATTENDANCE TAB =================
+
+class _AttendanceTab extends StatelessWidget {
+  final StudentModel student;
+  const _AttendanceTab({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Attendance history coming soon'),
+    );
+  }
+}
+
+// ================= ASSESSMENTS TAB =================
+
+class _AssessmentsTab extends StatelessWidget {
+  final StudentModel student;
+  const _AssessmentsTab({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Assessment results coming soon'),
+    );
+  }
+}
+
+// ================= SOCIAL TAB =================
+
+class _SocialTab extends StatelessWidget {
+  final StudentModel student;
+  const _SocialTab({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text('Social development records coming soon'),
+    );
+  }
+}
+
+// ================= REUSABLE WIDGETS =================
+
+// Section card — a titled card with a list of info rows
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SectionCard({
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Divider(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// A single label + value row
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
 
-  const _InfoTile({
+  const _InfoRow({
+    required this.icon,
     required this.label,
     required this.value,
   });
@@ -198,27 +570,27 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelLarge,
-        ),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: theme.disabledColor),
+          const SizedBox(width: 12),
+          Text(
+            '$label:',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.disabledColor,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : '—',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-// ================= RECORD ITEM MODEL =================
-
-class _RecordItem {
-  final String title;
-  final IconData icon;
-
-  _RecordItem(this.title, this.icon);
 }
