@@ -168,7 +168,7 @@ class _StudentHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  student.grade,
+                  student.classId,
                   style: theme.textTheme.bodySmall,
                 ),
               ],

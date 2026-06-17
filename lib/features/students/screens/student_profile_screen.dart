@@ -88,11 +88,9 @@ class _InfoSection extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _InfoTile(label: "Grade", value: student.grade),
+            _InfoTile(label: "Grade", value: student.classId),
             const SizedBox(height: 12),
             _InfoTile(label: "Gender", value: student.gender),
-            const SizedBox(height: 12),
-            _InfoTile(label: "Parent", value: student.parent),
           ],
         ),
       ),
