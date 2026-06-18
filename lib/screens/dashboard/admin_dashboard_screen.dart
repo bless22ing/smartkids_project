@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 //import '../../features/classes/screens/classes_screen.dart';
-//import '../../features/attendance/screens/attendance_screen.dart';
+import '../../features/attendance/screens/attendance_screen.dart';
+import '../../features/fees/screens/fees_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
 //import '../../features/staff/screens/staff_screen.dart';
 import '../../features/assessments/screens/assessment_screen.dart';
-//import '../../features/fees/screens/fees_screen.dart';
 import '../../../features/auth/services/auth_service.dart';
 
 // Changed to ConsumerStatefulWidget because we need BOTH:
@@ -36,13 +36,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // Pages list matches items list exactly — same order, same count
   // Placeholder is temporary for screens not built yet
   late final List<Widget> pages = [
-    const _DashboardHome(),
-    const StudentsListScreen(),
-    //const StaffScreen(),
-    //const AttendanceScreen(),
-    //const AssessmentScreen(),
-    //const FeesScreen(),
-    //const ClassesScreen(),
+    const _DashboardHome(),                    // 0 — Dashboard
+    const StudentsListScreen(),                // 1 — Students
+    const _ComingSoon(label: 'Staff'),         // 2 — Staff
+    const AttendanceScreen(),                  // 3 — Attendance
+     AssessmentScreen(),                  // 4 — Assessment
+    const FeesScreen(),                        // 5 — Fees
+    const _ComingSoon(label: 'Classes'),       // 6 — Classes
   ];
 
   // Logout through AuthService — proper way with Riverpod
@@ -299,4 +299,25 @@ class DashboardItem {
   final String label;
 
   const DashboardItem(this.icon, this.label);
+}
+
+class _ComingSoon extends StatelessWidget {
+  final String label;
+  const _ComingSoon({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.construction, size: 64,
+              color: Theme.of(context).disabledColor),
+          const SizedBox(height: 16),
+          Text('$label — Coming Soon',
+              style: Theme.of(context).textTheme.titleMedium),
+        ],
+      ),
+    );
+  }
 }
