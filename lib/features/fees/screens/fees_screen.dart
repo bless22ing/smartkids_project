@@ -233,6 +233,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                   ),
                   duration: Duration(seconds: 10),
                 ),
+
               );
 
               try {

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/attendance/screens/attendance_screen.dart';
 import '../../features/fees/screens/fees_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
-//import '../../features/staff/screens/staff_screen.dart';
+import '../../features/staff/screens/staff_screen.dart';
 import '../../features/assessments/screens/assessment_screen.dart';
 import '../../../features/auth/services/auth_service.dart';
 
@@ -38,7 +38,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   late final List<Widget> pages = [
     const _DashboardHome(),                    // 0 — Dashboard
     const StudentsListScreen(),                // 1 — Students
-    const _ComingSoon(label: 'Staff'),         // 2 — Staff
+    const StaffScreen(),         // 2 — Staff
     const AttendanceScreen(),                  // 3 — Attendance
      AssessmentScreen(),                  // 4 — Assessment
     const FeesScreen(),                        // 5 — Fees
