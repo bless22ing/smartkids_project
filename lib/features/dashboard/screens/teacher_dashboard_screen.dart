@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/models/app_constants.dart';
 import '../../auth/services/auth_service.dart';
 import '../../attendance/screens/attendance_screen.dart';
 import '../../assessments/screens/assessment_screen.dart';
+import '../../register/screens/attendance_summary_screen.dart';
 import '../../students/screens/students_list_screen.dart';
 import '../../social/screens/social_development_screen.dart';
 import '../../anecdotes/screens/anecdote_records_screen.dart';
@@ -27,6 +29,7 @@ class _TeacherDashboardScreenState
     _TeacherNavItem(Icons.assignment_outlined, "Assessments"),
     _TeacherNavItem(Icons.favorite_outline, "Social"),
     _TeacherNavItem(Icons.book_outlined, "Anecdotes"),
+    _TeacherNavItem(Icons.book_outlined, "Attendance"),
   ];
 
   late final List<Widget> pages = [
@@ -36,6 +39,7 @@ class _TeacherDashboardScreenState
     AssessmentScreen(),
     const SocialDevelopmentScreen(),
     const AnecdoteRecordsScreen(),
+    AttendanceSummaryScreen(lockedClassId: AppConstants.classEcdA), // or dynamic later
   ];
 
   Future<void> _handleLogout() async {

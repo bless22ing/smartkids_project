@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smartkids_project/features/register/screens/register_screen.dart';
 //import '../../features/classes/screens/classes_screen.dart';
 import '../../features/attendance/screens/attendance_screen.dart';
 import '../../features/fees/screens/fees_screen.dart';
+import '../../features/register/screens/attendance_summary_screen.dart';
 import '../../features/students/screens/students_list_screen.dart';
 import '../../features/staff/screens/staff_screen.dart';
 import '../../features/assessments/screens/assessment_screen.dart';
@@ -31,6 +33,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     DashboardItem(Icons.assignment_outlined, "Assessment"),
     DashboardItem(Icons.payments_outlined, "Fees"),
     DashboardItem(Icons.class_outlined, "Classes"),
+    DashboardItem(Icons.class_outlined, "Register"),
+    DashboardItem(Icons.summarize_outlined, "Attendance Summary"),
   ];
 
   // Pages list matches items list exactly — same order, same count
@@ -42,7 +46,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     const AttendanceScreen(),                  // 3 — Attendance
      AssessmentScreen(),                  // 4 — Assessment
     const FeesScreen(),                        // 5 — Fees
-    const _ComingSoon(label: 'Classes'),       // 6 — Classes
+    const _ComingSoon(label: 'Classes'),
+    const RegisterScreen(),
+    const AttendanceSummaryScreen(), // no lockedClassId — admin sees toggle
   ];
 
   // Logout through AuthService — proper way with Riverpod
