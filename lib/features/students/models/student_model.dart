@@ -1,12 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Guardian model — used for both parents and next of kin
-// Separate class because it's a reusable concept
 class GuardianModel {
   final String name;
   final String contact;
   final String email;
-  final String relationship; // "Mother", "Father", "Uncle" etc.
+  final String relationship;
 
   const GuardianModel({
     required this.name,
@@ -15,7 +13,6 @@ class GuardianModel {
     required this.relationship,
   });
 
-  // Convert to map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -25,7 +22,6 @@ class GuardianModel {
     };
   }
 
-  // Build from Firestore map
   factory GuardianModel.fromMap(Map<String, dynamic> map) {
     return GuardianModel(
       name: map['name'] ?? '',
@@ -35,14 +31,25 @@ class GuardianModel {
     );
   }
 
-  // Empty guardian — used as default when no data exists
   factory GuardianModel.empty() {
     return const GuardianModel(
-      name: '',
-      contact: '',
-      email: '',
-      relationship: '',
+      name: '', contact: '', email: '', relationship: '',
     );
+  }
+}
+
+// Boarder or Day scholar — official register terminology
+enum ScholarType {
+  day,
+  boarder;
+
+  String get displayName => this == ScholarType.day ? 'Day' : 'Boarder';
+  String get code => this == ScholarType.day ? 'D' : 'B';
+
+  static ScholarType fromString(String value) {
+    return value.toUpperCase() == 'B' || value.toLowerCase() == 'boarder'
+        ? ScholarType.boarder
+        : ScholarType.day;
   }
 }
 
@@ -50,37 +57,48 @@ class StudentModel {
   final String id;
 
   // Personal details
-  final String name;
+  final String surname;       // NEW — split from name per register
+  final String firstName;     // NEW — split from name per register
   final DateTime dateOfBirth;
   final String gender;
-  final String? photoUrl; // nullable — not every student has a photo
+  final String? photoUrl;
+
+  // Official register fields — NEW
+  final String birthCertNo;
+  final String religion;
+  final ScholarType scholarType;
+  final String gamesHouse;
 
   // School details
-  final String classId; // "ecda" or "ecdb"
+  final String classId;
   final DateTime enrollmentDate;
+  final int? rollNumber; // NEW — the "No." column on the register
 
-  // Guardians — two separate guardian objects
+  // Guardians
   final GuardianModel guardian1;
   final GuardianModel guardian2;
-
-  // Next of kin — separate from guardians
   final GuardianModel nextOfKin;
 
   // Medical
   final String allergies;
   final String medicalNotes;
 
-  // Active status
   final bool active;
 
   const StudentModel({
     required this.id,
-    required this.name,
+    required this.surname,
+    required this.firstName,
     required this.dateOfBirth,
     required this.gender,
     this.photoUrl,
+    this.birthCertNo = '',
+    this.religion = '',
+    this.scholarType = ScholarType.day,
+    this.gamesHouse = '',
     required this.classId,
     required this.enrollmentDate,
+    this.rollNumber,
     required this.guardian1,
     required this.guardian2,
     required this.nextOfKin,
@@ -89,13 +107,16 @@ class StudentModel {
     this.active = true,
   });
 
-  // Age is calculated automatically from dateOfBirth
-  // We never store age in Firestore because it changes every year
-  // This getter computes it fresh every time it's called
+  // Full name — combines surname + first name for display
+  // This is what most of the app will use instead of a single 'name' field
+  String get name => '$firstName $surname';
+
+  // Register-style display — SURNAME, Firstname (how official documents show it)
+  String get registerName => '${surname.toUpperCase()}, $firstName';
+
   int get age {
     final now = DateTime.now();
     int age = now.year - dateOfBirth.year;
-    // Adjust if birthday hasn't happened yet this year
     if (now.month < dateOfBirth.month ||
         (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
       age--;
@@ -103,35 +124,33 @@ class StudentModel {
     return age;
   }
 
-  // Human readable class name
-  String get className =>
-      classId == 'ecda' ? 'ECD A' : 'ECD B';
+  String get className => classId == 'ecda' ? 'ECD A' : 'ECD B';
 
-  // Build StudentModel from a Firestore document
   factory StudentModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
     return StudentModel(
       id: doc.id,
-      name: data['name'] ?? '',
-      // Firestore stores dates as Timestamp — convert to DateTime
+      surname: data['surname'] ?? '',
+      firstName: data['firstName'] ?? '',
       dateOfBirth: (data['dateOfBirth'] as Timestamp).toDate(),
       gender: data['gender'] ?? '',
       photoUrl: data['photoUrl'],
+      birthCertNo: data['birthCertNo'] ?? '',
+      religion: data['religion'] ?? '',
+      scholarType: ScholarType.fromString(data['scholarType'] ?? 'day'),
+      gamesHouse: data['gamesHouse'] ?? '',
       classId: data['classId'] ?? 'ecda',
       enrollmentDate: (data['enrollmentDate'] as Timestamp).toDate(),
-      // Guardian maps are nested objects in Firestore
+      rollNumber: data['rollNumber'],
       guardian1: data['guardian1'] != null
-          ? GuardianModel.fromMap(
-          Map<String, dynamic>.from(data['guardian1']))
+          ? GuardianModel.fromMap(Map<String, dynamic>.from(data['guardian1']))
           : GuardianModel.empty(),
       guardian2: data['guardian2'] != null
-          ? GuardianModel.fromMap(
-          Map<String, dynamic>.from(data['guardian2']))
+          ? GuardianModel.fromMap(Map<String, dynamic>.from(data['guardian2']))
           : GuardianModel.empty(),
       nextOfKin: data['nextOfKin'] != null
-          ? GuardianModel.fromMap(
-          Map<String, dynamic>.from(data['nextOfKin']))
+          ? GuardianModel.fromMap(Map<String, dynamic>.from(data['nextOfKin']))
           : GuardianModel.empty(),
       allergies: data['allergies'] ?? '',
       medicalNotes: data['medicalNotes'] ?? '',
@@ -139,15 +158,21 @@ class StudentModel {
     );
   }
 
-  // Convert StudentModel to a map to SAVE to Firestore
   Map<String, dynamic> toMap() {
     return {
-      'name': name,
+      'surname': surname,
+      'firstName': firstName,
+      'name': name, // also store combined name for easy querying/sorting
       'dateOfBirth': Timestamp.fromDate(dateOfBirth),
       'gender': gender,
       'photoUrl': photoUrl,
+      'birthCertNo': birthCertNo,
+      'religion': religion,
+      'scholarType': scholarType.name,
+      'gamesHouse': gamesHouse,
       'classId': classId,
       'enrollmentDate': Timestamp.fromDate(enrollmentDate),
+      'rollNumber': rollNumber,
       'guardian1': guardian1.toMap(),
       'guardian2': guardian2.toMap(),
       'nextOfKin': nextOfKin.toMap(),

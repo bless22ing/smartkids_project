@@ -4,6 +4,9 @@ import '../models/student_model.dart';
 import '../services/student_service.dart';
 import '../../../shared/models/app_user.dart';
 import '../../auth/services/auth_service.dart';
+import '../../social/models/social_development_model.dart';
+import '../../social/services/social_development_service.dart';
+import '../../social/screens/add_social_record_screen.dart';
 
 class StudentProfileScreen extends ConsumerStatefulWidget {
   final StudentModel student;
@@ -305,14 +308,35 @@ class _PersonalTab extends StatelessWidget {
             _InfoRow(
               icon: Icons.cake_outlined,
               label: 'Date of Birth',
-              value:
-              '${student.dateOfBirth.day}/${student.dateOfBirth.month}/${student.dateOfBirth.year}',
+              value: '${student.dateOfBirth.day}/${student.dateOfBirth.month}/${student.dateOfBirth.year}',
             ),
             _InfoRow(
               icon: Icons.people_outline,
               label: 'Gender',
               value: student.gender,
             ),
+            // NEW rows
+            _InfoRow(
+              icon: Icons.badge_outlined,
+              label: 'Birth Cert No.',
+              value: student.birthCertNo,
+            ),
+            _InfoRow(
+              icon: Icons.church_outlined,
+              label: 'Religion',
+              value: student.religion,
+            ),
+            _InfoRow(
+              icon: Icons.home_work_outlined,
+              label: 'Scholar Type',
+              value: student.scholarType.displayName,
+            ),
+            if (student.gamesHouse.isNotEmpty)
+              _InfoRow(
+                icon: Icons.sports_outlined,
+                label: 'Games House',
+                value: student.gamesHouse,
+              ),
             _InfoRow(
               icon: Icons.class_outlined,
               label: 'Class',
@@ -321,8 +345,7 @@ class _PersonalTab extends StatelessWidget {
             _InfoRow(
               icon: Icons.event_outlined,
               label: 'Enrolled',
-              value:
-              '${student.enrollmentDate.day}/${student.enrollmentDate.month}/${student.enrollmentDate.year}',
+              value: '${student.enrollmentDate.day}/${student.enrollmentDate.month}/${student.enrollmentDate.year}',
             ),
           ],
         ),
@@ -499,14 +522,130 @@ class _AssessmentsTab extends StatelessWidget {
 
 // ================= SOCIAL TAB =================
 
-class _SocialTab extends StatelessWidget {
+class _SocialTab extends ConsumerWidget {
   final StudentModel student;
   const _SocialTab({required this.student});
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Social development records coming soon'),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final recordsAsync =
+    ref.watch(studentSocialRecordsProvider(student.id));
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddSocialRecordScreen(student: student),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+      body: recordsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
+        data: (records) {
+          if (records.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_outline,
+                      size: 48, color: theme.disabledColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No social development records yet',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.disabledColor,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: records.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final record = records[index];
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: theme.dividerColor),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${record.date.day}/${record.date.month}/${record.date.year}',
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          Text(
+                            'by ${record.recordedByName}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.disabledColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: SocialSkills.all
+                            .where((key) =>
+                            record.ratings.containsKey(key))
+                            .map((key) {
+                          final rating = record.ratingFor(key)!;
+                          return Chip(
+                            label: Text(
+                              '${SocialSkills.displayNames[key]}: ${rating.displayName}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            backgroundColor:
+                            rating.color.withValues(alpha: 0.15),
+                            labelStyle:
+                            TextStyle(color: rating.color),
+                            side: BorderSide.none,
+                          );
+                        }).toList(),
+                      ),
+                      if (record.comment.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceVariant
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            record.comment,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

@@ -21,9 +21,20 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _formKeys = List.generate(6, (_) => GlobalKey<FormState>());
 
   // ===== PERSONAL DETAILS =====
-  final _nameCtrl = TextEditingController();
+  //final _nameCtrl = TextEditingController();
+  //DateTime? _dateOfBirth;
+  //String _gender = 'Male';
+
+  final _surnameCtrl = TextEditingController();      // renamed/split
+  final _firstNameCtrl = TextEditingController();    // new
   DateTime? _dateOfBirth;
   String _gender = 'Male';
+
+// ===== REGISTER DETAILS (NEW) =====
+  final _birthCertCtrl = TextEditingController();
+  final _religionCtrl = TextEditingController();
+  ScholarType _scholarType = ScholarType.day;
+  final _gamesHouseCtrl = TextEditingController();
 
   // ===== SCHOOL DETAILS =====
   String _classId = AppConstants.classEcdA;
@@ -53,7 +64,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _nameCtrl.dispose();
+    _surnameCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _birthCertCtrl.dispose();
+    _religionCtrl.dispose();
+    _gamesHouseCtrl.dispose();
     _g1NameCtrl.dispose();
     _g1ContactCtrl.dispose();
     _g1EmailCtrl.dispose();
@@ -109,10 +124,15 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
     try {
       final student = StudentModel(
-        id: '', // Firestore generates the ID
-        name: _nameCtrl.text.trim(),
+        id: '',
+        surname: _surnameCtrl.text.trim(),
+        firstName: _firstNameCtrl.text.trim(),
         dateOfBirth: _dateOfBirth!,
         gender: _gender,
+        birthCertNo: _birthCertCtrl.text.trim(),
+        religion: _religionCtrl.text.trim(),
+        scholarType: _scholarType,
+        gamesHouse: _gamesHouseCtrl.text.trim(),
         classId: _classId,
         enrollmentDate: _enrollmentDate,
         guardian1: GuardianModel(
@@ -284,16 +304,30 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         key: _formKeys[0],
         child: Column(
           children: [
-            // Full name
+            // Surname
             TextFormField(
-              controller: _nameCtrl,
+              controller: _surnameCtrl,
               decoration: _inputDecoration(
-                label: 'Full Name',
+                label: 'Surname',
+                icon: Icons.person_outline,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              validator: (v) =>
+              v == null || v.trim().isEmpty ? 'Surname is required' : null,
+            ),
+
+            const SizedBox(height: 16),
+
+            // First name
+            TextFormField(
+              controller: _firstNameCtrl,
+              decoration: _inputDecoration(
+                label: 'First Name',
                 icon: Icons.person_outline,
               ),
               textCapitalization: TextCapitalization.words,
               validator: (v) =>
-              v == null || v.trim().isEmpty ? 'Name is required' : null,
+              v == null || v.trim().isEmpty ? 'First name is required' : null,
             ),
 
             const SizedBox(height: 16),
@@ -314,20 +348,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
-                  // ECD children are typically 3-6 years old
-                  initialDate: DateTime.now().subtract(
-                    const Duration(days: 365 * 4),
-                  ),
-                  firstDate: DateTime.now().subtract(
-                    const Duration(days: 365 * 8),
-                  ),
-                  lastDate: DateTime.now().subtract(
-                    const Duration(days: 365 * 2),
-                  ),
+                  initialDate: DateTime.now().subtract(const Duration(days: 365 * 4)),
+                  firstDate: DateTime.now().subtract(const Duration(days: 365 * 8)),
+                  lastDate: DateTime.now().subtract(const Duration(days: 365 * 2)),
                 );
-                if (picked != null) {
-                  setState(() => _dateOfBirth = picked);
-                }
+                if (picked != null) setState(() => _dateOfBirth = picked);
               },
             ),
 
@@ -344,6 +369,55 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                 return DropdownMenuItem(value: g, child: Text(g));
               }).toList(),
               onChanged: (v) => setState(() => _gender = v!),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Birth certificate number — NEW
+            TextFormField(
+              controller: _birthCertCtrl,
+              decoration: _inputDecoration(
+                label: 'Birth Certificate No.',
+                icon: Icons.badge_outlined,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Religion — NEW
+            TextFormField(
+              controller: _religionCtrl,
+              decoration: _inputDecoration(
+                label: 'Religion',
+                icon: Icons.church_outlined,
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Boarder/Day — NEW
+            DropdownButtonFormField<ScholarType>(
+              value: _scholarType,
+              decoration: _inputDecoration(
+                label: 'Boarder / Day Scholar',
+                icon: Icons.home_work_outlined,
+              ),
+              items: ScholarType.values.map((s) {
+                return DropdownMenuItem(value: s, child: Text(s.displayName));
+              }).toList(),
+              onChanged: (v) => setState(() => _scholarType = v!),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Games house — NEW
+            TextFormField(
+              controller: _gamesHouseCtrl,
+              decoration: _inputDecoration(
+                label: 'Games House (optional)',
+                icon: Icons.sports_outlined,
+              ),
             ),
           ],
         ),

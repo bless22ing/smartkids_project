@@ -176,13 +176,15 @@ class _AttendanceDaySheetState extends ConsumerState<AttendanceDaySheet> {
 // Enum defined here and imported by attendance_screen.dart
 // We moved it here because it belongs with the sheet that uses it most
 enum AttendanceStatus {
-  present,
-  absent,
-  sick;
+  newPupil,  // N — first entry only
+  present,   // /
+  absent,    // a
+  sick;      // s
 
-  // Human readable name shown in the UI
   String get displayName {
     switch (this) {
+      case AttendanceStatus.newPupil:
+        return 'New Pupil';
       case AttendanceStatus.present:
         return 'Present';
       case AttendanceStatus.absent:
@@ -192,9 +194,24 @@ enum AttendanceStatus {
     }
   }
 
-  // Short description shown as subtitle in radio buttons
+  // Official register code — this is what gets written on paper
+  String get code {
+    switch (this) {
+      case AttendanceStatus.newPupil:
+        return 'N';
+      case AttendanceStatus.present:
+        return '/';
+      case AttendanceStatus.absent:
+        return 'a';
+      case AttendanceStatus.sick:
+        return 's';
+    }
+  }
+
   String get description {
     switch (this) {
+      case AttendanceStatus.newPupil:
+        return 'First entry for this pupil';
       case AttendanceStatus.present:
         return 'Child attended school today';
       case AttendanceStatus.absent:
@@ -204,9 +221,10 @@ enum AttendanceStatus {
     }
   }
 
-  // Color for each status — used in radio buttons and lists
   Color get color {
     switch (this) {
+      case AttendanceStatus.newPupil:
+        return Colors.blue;
       case AttendanceStatus.present:
         return Colors.green;
       case AttendanceStatus.absent:
