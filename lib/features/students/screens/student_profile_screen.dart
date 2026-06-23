@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smartkids_project/features/students/records/anecdotal/add_anecdotal_screen.dart';
+import '../../reports/screens/create_report_card_screen.dart';
 import '../models/student_model.dart';
 import '../services/student_service.dart';
 import '../../../shared/models/app_user.dart';
@@ -33,8 +35,8 @@ class _StudentProfileScreenState
   void initState() {
     super.initState();
     _student = widget.student;
-    // 5 tabs — Personal, Medical, Attendance, Assessments, Social
-    _tabController = TabController(length: 5, vsync: this);
+    // 5 tabs — Personal, Medical, Attendance, Assessments, Social, Anecdotal
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -122,6 +124,20 @@ class _StudentProfileScreenState
                     }
                     return Row(
                       children: [
+                        // Inside the userAsync.when -> data: (user) builder,
+// add this button before the edit/deactivate ones:
+                        IconButton(
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          tooltip: 'Generate Report Card',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CreateReportCardScreen(student: _student),
+                              ),
+                            );
+                          },
+                        ),
                         // Edit button
                         IconButton(
                           icon: const Icon(Icons.edit_outlined),
@@ -165,6 +181,7 @@ class _StudentProfileScreenState
                   Tab(text: 'Attendance'),
                   Tab(text: 'Assessments'),
                   Tab(text: 'Social'),
+                  Tab(text: 'Anecdotal')
                 ],
               ),
             ),
@@ -180,6 +197,7 @@ class _StudentProfileScreenState
             _AttendanceTab(student: _student),
             _AssessmentsTab(student: _student),
             _SocialTab(student: _student),
+            _AnecdotalTab(student: _student),
           ],
         ),
       ),
@@ -649,6 +667,137 @@ class _SocialTab extends ConsumerWidget {
     );
   }
 }
+
+// ================= SOCIAL TAB =================
+
+class _AnecdotalTab extends ConsumerWidget {
+  final StudentModel student;
+  const _AnecdotalTab({required this.student});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final recordsAsync =
+    ref.watch(studentSocialRecordsProvider(student.id));
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddAnecdotalScreen(student: student),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+      body: recordsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error: $e')),
+        data: (records) {
+          if (records.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_outline,
+                      size: 48, color: theme.disabledColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No anecdotal records yet',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.disabledColor,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: records.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final record = records[index];
+              return Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: theme.dividerColor),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${record.date.day}/${record.date.month}/${record.date.year}',
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          Text(
+                            'by ${record.recordedByName}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.disabledColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: SocialSkills.all
+                            .where((key) =>
+                            record.ratings.containsKey(key))
+                            .map((key) {
+                          final rating = record.ratingFor(key)!;
+                          return Chip(
+                            label: Text(
+                              '${SocialSkills.displayNames[key]}: ${rating.displayName}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            backgroundColor:
+                            rating.color.withValues(alpha: 0.15),
+                            labelStyle:
+                            TextStyle(color: rating.color),
+                            side: BorderSide.none,
+                          );
+                        }).toList(),
+                      ),
+                      if (record.comment.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceVariant
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            record.comment,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
 
 // ================= REUSABLE WIDGETS =================
 

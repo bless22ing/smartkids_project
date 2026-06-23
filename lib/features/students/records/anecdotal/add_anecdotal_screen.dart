@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:smartkids_project/features/students/models/student_model.dart';
 
 class AddAnecdotalScreen extends StatefulWidget {
-  const AddAnecdotalScreen({super.key});
+  const AddAnecdotalScreen({super.key, required StudentModel student});
 
   @override
   State<AddAnecdotalScreen> createState() => _AddAnecdotalScreenState();

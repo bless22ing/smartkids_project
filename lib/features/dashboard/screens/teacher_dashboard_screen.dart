@@ -53,6 +53,34 @@ class _TeacherDashboardScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: isTablet
+          ? null
+          : AppBar(
+        backgroundColor: theme.colorScheme.secondary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          children: const [
+            Icon(Icons.school, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'SmartKids',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_outlined),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Row(
         children: [
           if (isTablet) _buildSideBar(context),

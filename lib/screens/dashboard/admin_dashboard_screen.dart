@@ -67,6 +67,35 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      // Add AppBar only for phone layout — tablet has logout in sidebar already
+      appBar: isTablet
+          ? null
+          : AppBar(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          children: [
+            const Icon(Icons.school, size: 22),
+            const SizedBox(width: 8),
+            const Text(
+              'SmartKids',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_outlined),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Row(
         children: [
           if (isTablet) _buildSideBar(context),
