@@ -76,10 +76,14 @@ class _StaffProfileScreenState extends ConsumerState<StaffProfileScreen>
               actions: [
                 if (_staff.status == StaffStatus.active)
                   IconButton(
-                    icon: const Icon(Icons.person_off_outlined),
+                    icon: const Icon(
+                      Icons.person_off_outlined,
+                      color: Colors.white,
+                    ),
                     onPressed: _deactivate,
                     tooltip: 'Deactivate',
                   ),
+                const SizedBox(width: 8),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: _StaffHeader(staff: _staff),
@@ -87,6 +91,9 @@ class _StaffProfileScreenState extends ConsumerState<StaffProfileScreen>
               bottom: TabBar(
                 controller: _tabController,
                 isScrollable: true,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: Colors.white,
                 tabs: const [
                   Tab(text: 'Details'),
                   Tab(text: 'Qualifications'),

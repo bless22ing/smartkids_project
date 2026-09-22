@@ -18,7 +18,7 @@ class ReportCardPdfScreen extends StatelessWidget {
     final brandRed = PdfColor.fromHex('#8B0000');
 
     // Load both images from assets
-    final logoBytes = await rootBundle.load('assets/images/school_logo.png');
+    final logoBytes = await rootBundle.load('assets/images/school_logo.jpg');
     final coatOfArmsBytes =
     await rootBundle.load('assets/images/coat_of_arms.png');
 

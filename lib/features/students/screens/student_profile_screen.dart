@@ -110,51 +110,131 @@ class _StudentProfileScreenState
       body: NestedScrollView(
         // NestedScrollView lets the header scroll away
         // while the tab content stays and scrolls independently
+//         headerSliverBuilder: (context, innerBoxIsScrolled) {
+//           return [
+//             SliverAppBar(
+//               expandedHeight: 200,
+//               pinned: true, // keeps app bar visible when scrolled
+//               actions: [
+//                 // Only show edit/deactivate to admins
+//                 userAsync.when(
+//                   data: (user) {
+//                     if (user == null || !user.role.isAdmin) {
+//                       return const SizedBox.shrink();
+//                     }
+//                     return Row(
+//                       children: [
+//                         // Inside the userAsync.when -> data: (user) builder,
+// // add this button before the edit/deactivate ones:
+//                         IconButton(
+//                           icon: const Icon(Icons.picture_as_pdf_outlined),
+//                           tooltip: 'Generate Report Card',
+//                           onPressed: () {
+//                             Navigator.push(
+//                               context,
+//                               MaterialPageRoute(
+//                                 builder: (_) => CreateReportCardScreen(student: _student),
+//                               ),
+//                             );
+//                           },
+//                         ),
+//                         // Edit button
+//                         IconButton(
+//                           icon: const Icon(Icons.edit_outlined),
+//                           tooltip: 'Edit Student',
+//                           onPressed: () {
+//                             // TODO: Navigate to EditStudentScreen
+//                             ScaffoldMessenger.of(context).showSnackBar(
+//                               const SnackBar(
+//                                 content: Text('Edit coming soon'),
+//                               ),
+//                             );
+//                           },
+//                         ),
+//                         // Deactivate button — only if student is active
+//                         if (_student.active)
+//                           IconButton(
+//                             icon: const Icon(Icons.person_off_outlined),
+//                             tooltip: 'Deactivate Student',
+//                             onPressed: _deactivateStudent,
+//                           ),
+//                       ],
+//                     );
+//                   },
+//                   loading: () => const SizedBox.shrink(),
+//                   error: (_, __) => const SizedBox.shrink(),
+//                 ),
+//               ],
+//
+//               // Flexible space shows the student header
+//               flexibleSpace: FlexibleSpaceBar(
+//                 background: _StudentHeader(student: _student),
+//               ),
+//
+//               // Tab bar stays pinned at the bottom of the app bar
+//               bottom: TabBar(
+//                 controller: _tabController,
+//                 isScrollable: true,
+//                 tabs: const [
+//                   Tab(text: 'Personal'),
+//                   Tab(text: 'Medical'),
+//                   Tab(text: 'Attendance'),
+//                   Tab(text: 'Assessments'),
+//                   Tab(text: 'Social'),
+//                   Tab(text: 'Anecdotal')
+//                 ],
+//               ),
+//             ),
+//           ];
+//         },
         headerSliverBuilder: (context, innerBoxIsScrolled) {
+          final userAsync = ref.watch(currentUserProvider);
+
           return [
             SliverAppBar(
               expandedHeight: 200,
-              pinned: true, // keeps app bar visible when scrolled
+              pinned: true,
+              // Actions are always visible — not dependent on scroll position
               actions: [
-                // Only show edit/deactivate to admins
+                // PDF button — visible to everyone
+                IconButton(
+                  icon: const Icon(Icons.picture_as_pdf_outlined,
+                      color: Colors.white),
+                  tooltip: 'Generate Report Card',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CreateReportCardScreen(student: _student),
+                      ),
+                    );
+                  },
+                ),
+
+                // Edit and deactivate — admin only
                 userAsync.when(
                   data: (user) {
                     if (user == null || !user.role.isAdmin) {
                       return const SizedBox.shrink();
                     }
                     return Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Inside the userAsync.when -> data: (user) builder,
-// add this button before the edit/deactivate ones:
                         IconButton(
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          tooltip: 'Generate Report Card',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => CreateReportCardScreen(student: _student),
-                              ),
-                            );
-                          },
-                        ),
-                        // Edit button
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: const Icon(Icons.edit_outlined,
+                              color: Colors.white),
                           tooltip: 'Edit Student',
                           onPressed: () {
-                            // TODO: Navigate to EditStudentScreen
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Edit coming soon'),
-                              ),
+                              const SnackBar(content: Text('Edit coming soon')),
                             );
                           },
                         ),
-                        // Deactivate button — only if student is active
                         if (_student.active)
                           IconButton(
-                            icon: const Icon(Icons.person_off_outlined),
+                            icon: const Icon(Icons.person_off_outlined,
+                                color: Colors.white),
                             tooltip: 'Deactivate Student',
                             onPressed: _deactivateStudent,
                           ),
@@ -164,24 +244,26 @@ class _StudentProfileScreenState
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
+
+                const SizedBox(width: 8),
               ],
 
-              // Flexible space shows the student header
               flexibleSpace: FlexibleSpaceBar(
                 background: _StudentHeader(student: _student),
               ),
 
-              // Tab bar stays pinned at the bottom of the app bar
               bottom: TabBar(
                 controller: _tabController,
                 isScrollable: true,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: Colors.white,
                 tabs: const [
                   Tab(text: 'Personal'),
                   Tab(text: 'Medical'),
                   Tab(text: 'Attendance'),
                   Tab(text: 'Assessments'),
                   Tab(text: 'Social'),
-                  Tab(text: 'Anecdotal')
                 ],
               ),
             ),

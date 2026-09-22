@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smartkids_project/features/messaging/screens/messaging_screen.dart';
 import 'package:smartkids_project/features/register/screens/register_screen.dart';
 //import '../../features/classes/screens/classes_screen.dart';
 import '../../features/attendance/screens/attendance_screen.dart';
@@ -35,6 +36,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     DashboardItem(Icons.class_outlined, "Classes"),
     DashboardItem(Icons.class_outlined, "Register"),
     DashboardItem(Icons.summarize_outlined, "Attendance Summary"),
+    DashboardItem(Icons.message_outlined, "Messaging"),
   ];
 
   // Pages list matches items list exactly — same order, same count
@@ -48,7 +50,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     const FeesScreen(),                        // 5 — Fees
     const _ComingSoon(label: 'Classes'),
     const RegisterScreen(),
-    const AttendanceSummaryScreen(), // no lockedClassId — admin sees toggle
+    const AttendanceSummaryScreen(),
+    const MessagingScreen(),// no lockedClassId — admin sees toggle
   ];
 
   // Logout through AuthService — proper way with Riverpod
